@@ -1,0 +1,2 @@
+sample_id,vcf_path,assembly,hpo_terms
+NA12878,/home/abudllah/Desktop/WES_pipeline_validation_dataset/results/final/NA12878_ASV5.final.vcf,37,HP:0001250

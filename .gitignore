@@ -1,0 +1,22 @@
+# --- Nextflow / runtime ---
+work/
+results/
+.nextflow*
+.nextflow.log*
+.cache/
+*.trace
+*.dot
+
+# --- Large / private data ---
+databases/
+!databases/.gitkeep
+
+# --- Editors / OS junk ---
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Logs / temp ---
+*.log
+*.tmp
