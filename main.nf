@@ -3,11 +3,11 @@ nextflow.enable.dsl=2
 
 /*
 ========================================================================================
-    Clinical VCF Annotation Pipeline
+    Clinical VCF Annotation Pipeline with Exomiser
 ========================================================================================
-    Author: Clinical Genomics Lab
-    Version: 1.0.0
-    Description: Sequential annotation pipeline for clinical VCF files
+    Author: Bioinformatics team @ Liferaomics
+    Version: 1.1.0
+    Description: Sequential annotation pipeline for clinical VCF files with phenotype analysis
     
     Annotations applied in order:
     1. SnpEff - Gene/transcript functional effects
@@ -15,11 +15,12 @@ nextflow.enable.dsl=2
     3. HGMD - Human Gene Mutation Database
     4. dbNSFP - Pathogenicity scores and population frequencies
     5. OMIM - Online Mendelian Inheritance in Man (optional)
+    6. Exomiser - Phenotype-driven variant prioritization
 ========================================================================================
 */
 
 // Pipeline version
-version = '1.0.0'
+version = '1.1.0_Beta'
 
 // Import workflows
 include { ANNOTATION } from './workflows/annotation'
@@ -28,11 +29,12 @@ include { ANNOTATION } from './workflows/annotation'
 include { PARSE_SAMPLESHEET } from './modules/parse_samplesheet'
 include { SAVE_FINAL_VCF } from './modules/save_final_vcf'
 include { EXTRACT_TSV } from './modules/extract_tsv'
+include { EXOMISER_ANALYSIS } from './modules/exomiser_analysis'
 
 // Print pipeline header
 log.info """
 ====================================
-Clinical VCF Annotation Pipeline
+Clinical VCF Annotation Pipeline "We call it Tertiary Pipeline"
 ====================================
 Version      : ${version}
 Samplesheet  : ${params.samplesheet}
@@ -45,7 +47,15 @@ Annotation Order:
 4. dbNSFP     : ${params.skip_dbnsfp ? 'SKIP' : 'RUN'}
 5. OMIM       : ${params.skip_omim ? 'SKIP' : 'RUN'}
 ------------------------------------
-Extract TSV   : ${params.skip_tsv ? 'SKIP' : 'RUN'}
+6. Exomiser     : ${params.skip_exomiser ? 'SKIP' : 'RUN on ' + params.exomiser_run_on + ' VCF'}
+7. Extract TSV  : ${params.skip_tsv ? 'SKIP' : 'RUN'}
+====================================
+This pipeline still under validation
+====================================
+To Do:
+1. fix dbnsfp processing botelnick
+2. Test on AWS "assigned to Waleed Osman"
+3. Add more annotation information
 ====================================
 """
 
@@ -56,6 +66,16 @@ if (!params.samplesheet) {
 
 if (!file(params.samplesheet).exists()) {
     error "ERROR: Samplesheet file not found: ${params.samplesheet}"
+}
+
+// Check Exomiser configuration if enabled
+if (!params.skip_exomiser) {
+    if (!file(params.exomiser_jar).exists()) {
+        error "ERROR: Exomiser JAR not found: ${params.exomiser_jar}"
+    }
+    if (!file(params.exomiser_data_dir).exists()) {
+        error "ERROR: Exomiser data directory not found: ${params.exomiser_data_dir}"
+    }
 }
 
 // Main workflow
@@ -76,6 +96,7 @@ workflow {
             def meta = [:]
             meta.id = row.sample_id
             meta.assembly = row.assembly
+            meta.hpo_terms = row.hpo_terms ?: ""  // HPO terms for Exomiser
             
             // Validate assembly version
             if (meta.assembly != "37" && meta.assembly != "38") {
@@ -92,12 +113,22 @@ workflow {
         }
         .set { ch_samples }
     
+    // Run Exomiser on raw VCF if configured
+    if (!params.skip_exomiser && params.exomiser_run_on == 'raw') {
+        EXOMISER_ANALYSIS(ch_samples)
+    }
+    
     // Run sequential annotation workflow
     // Order: SnpEff -> ClinVar -> HGMD -> dbNSFP -> OMIM
     ANNOTATION(ch_samples)
     
     // Save final annotated VCF with simple naming
     SAVE_FINAL_VCF(ANNOTATION.out.annotated_vcf)
+    
+    // Run Exomiser on annotated VCF if configured
+    if (!params.skip_exomiser && params.exomiser_run_on == 'annotated') {
+        EXOMISER_ANALYSIS(SAVE_FINAL_VCF.out.vcf)
+    }
     
     // Extract TSV tables from annotated VCF if not skipped
     if (!params.skip_tsv) {
@@ -126,6 +157,7 @@ workflow.onComplete {
     - TSV tables     : ${params.outdir}/[sample_id]/tables/
     - SnpEff reports : ${params.outdir}/[sample_id]/snpeff/
     - Annotations    : ${params.outdir}/[sample_id]/annotations/
+    - Exomiser       : ${params.outdir}/[sample_id]/exomiser/
     - Pipeline info  : ${params.outdir}/pipeline_info/
     ========================================
     """.stripIndent()
@@ -147,8 +179,14 @@ workflow.onError {
     Please check:
     1. Input files exist and are readable
     2. Database files are properly configured
-    3. Docker/Singularity is running
-    4. Sufficient memory is available
+    3. Docker/Singularity is running (for annotation modules)
+    4. Exomiser is properly installed (if enabled)
+    5. Sufficient memory is available
     ========================================
+    After identifing the issue do:
+    1. Try to fix it 
+    2. Google it
+    3. Use chatGPT
+    4. Lastly, Contact one of Bioinformatics member "#Be_Independent"
     """.stripIndent()
 }

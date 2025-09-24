@@ -1,8 +1,7 @@
-cat > README.md <<'EOF'
-# Clinical VCF Annotation Pipeline
+#  processing botelnick
 
 A **Nextflow DSL2 pipeline** for clinical variant annotation.  
-This project automates annotation of VCF files using multiple public and licensed databases, producing both annotated VCFs and tabular reports.
+This project automates annotation of VCF files using multiple public and licensed databases, producing both annotated VCFs and tabular reports using snpEff, snpSIFT, and Exomiser.
 
 ---
 
@@ -12,11 +11,14 @@ This project automates annotation of VCF files using multiple public and license
 - **Supported annotations**:
   - [SnpEff](https://pcingola.github.io/SnpEff/) (functional effects)  
   - [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/)  
-  - [dbNSFP](https://sites.google.com/site/jpopgen/dbNSFP)  
+  - [dbNSFP](https://sites.google.com/site/jpopgen/dbNSFP/)  
+  - [Exomiser](https://exomiser.readthedocs.io/en/latest/index.html/)
+    - (Due to unconcistinacy of Exomiser project. Exomiser Version 14.0.0 used for this pipeline)
   - HGMD (*licensed, not included*)  
   - OMIM (*licensed, not included*)  
 - **Sample management** via CSV (`samplesheet.csv`)  
-- **Python helpers** for parsing and reporting  
+- **Python helpers** for parsing
+- **Python helpers** for auto-generate yml file for Exomiser
 - **Configurable resources** (see `conf/`)  
 - **Outputs**: annotated VCFs and TSV summaries  
 
@@ -27,7 +29,8 @@ This project automates annotation of VCF files using multiple public and license
 ### Prerequisites
 - Nextflow ≥ 25.04  
 - Java 11+  
-- Docker or Singularity/Apptainer  
+- Docker or Singularity/Apptainer
+- Exomiser "Version 14.0.0" in the nextflow.config
 - Databases: ClinVar, dbNSFP, SnpEff, HGMD\*, OMIM\*  
   (\* licensed databases must be obtained separately)
 
@@ -38,6 +41,9 @@ nextflow run main.nf \
   --outdir results \
   -profile docker
 ````
+- **By defaults HGMD, dbNSFP, OMIM are disabiled and clinvar and Exomiser are enabled**:
+  - To change that use --skip_<DB_NAME> false 
+  - Example --skip_dbnsfp false
 ## 📁 Project Structure
 
 ```
@@ -106,6 +112,84 @@ nextflow run main.nf \
   -resume
 ```
 
+### Last working run output
+
+```bash
+(base) abudllah@abudllah:~/Desktop/tertiary-pipeline$ nextflow run main.nf \
+  --samplesheet samplesheet.csv \
+  --outdir results \
+  --skip_hgmd false \
+  --skip_dbnsfp false \
+  --skip_omim true \
+  -profile docker
+
+ N E X T F L O W   ~  version 25.04.6
+
+Launching `main.nf` [voluminous_rutherford] DSL2 - revision: 6a986071ca
+
+
+====================================
+Clinical VCF Annotation Pipeline "We call it Tertiary Pipeline"
+====================================
+Version      : 1.1.0_Beta
+Samplesheet  : samplesheet.csv
+Output dir   : results
+------------------------------------
+Annotation Order:
+1. SnpEff     : Always run
+2. ClinVar    : RUN
+3. HGMD       : RUN
+4. dbNSFP     : RUN
+5. OMIM       : SKIP
+------------------------------------
+6. Exomiser     : RUN on raw VCF
+7. Extract TSV  : RUN
+====================================
+This pipeline still under validation
+====================================
+To Do:
+1. fix dbnsfp processing botelnick
+2. Test on AWS "assigned to Waleed Osman"
+3. Add more annotation information
+====================================
+
+executor >  local (8)
+executor >  local (8)
+[09/ac98d4] process > PARSE_SAMPLESHEET (Parsing samplesheet) [100%] 1 of 1 ✔
+[4c/8c250e] process > EXOMISER_ANALYSIS (NA12878)             [100%] 1 of 1 ✔
+[0d/f5b8cf] process > ANNOTATION:SNPEFF_ANNOTATE (NA12878)    [100%] 1 of 1 ✔
+[1d/125090] process > ANNOTATION:SNPSIFT_CLINVAR (NA12878)    [100%] 1 of 1 ✔
+[76/fdce91] process > ANNOTATION:SNPSIFT_HGMD (NA12878)       [100%] 1 of 1 ✔
+[ce/c3fa87] process > ANNOTATION:SNPSIFT_DBNSFP (NA12878)     [100%] 1 of 1 ✔
+[8c/d5c75b] process > SAVE_FINAL_VCF (NA12878)                [100%] 1 of 1 ✔
+[55/09540b] process > EXTRACT_TSV (NA12878)                   [100%] 1 of 1 ✔
+
+
+========================================
+Pipeline completed!
+========================================
+
+Execution status : SUCCESS ✓
+Duration         : 29m 4s
+Output directory : results
+
+Output files:
+- Final VCFs     : results/[sample_id]/final/
+- TSV tables     : results/[sample_id]/tables/
+- SnpEff reports : results/[sample_id]/snpeff/
+- Annotations    : results/[sample_id]/annotations/
+- Exomiser       : results/[sample_id]/exomiser/
+- Pipeline info  : results/pipeline_info/
+========================================
+
+Completed at: 24-Sep-2025 08:21:37
+Duration    : 29m 5s
+CPU hours   : 2.0
+Succeeded   : 8
+
+
+(base) abudllah@abudllah:~/Desktop/tertiary-pipeline$ 
+```
 
 ###🔒 Notes on Databases
 
@@ -113,5 +197,17 @@ nextflow run main.nf \
 - Paths to local VCFs/databases should be configured in nextflow.config or via --databases parameter.
 
 ### 👨‍💻 Author/s
-- Abdullah Al-Nawfal
-- Dr. Touati 
+- Dr. Wail Baalawi
+  - Bioinformatics Department Head  
+  - wbaalawi@liferaomics.com.sa
+- Dr. Touati Bin Benoukraf
+  - Consultanat Bioinformatician 
+  - tbenoukraf@liferaomics.com.sa
+- Abdullah Alnawfal
+  - Bioinformatician 
+  - aalnawfal@Liferaomics.com.sa
+- Waleed Osman
+  - Bioinformatician
+  - wosman@liferaomics.com.sa
+
+
