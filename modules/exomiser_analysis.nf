@@ -41,7 +41,6 @@ process EXOMISER_ANALYSIS {
     # Create analysis YAML file for this sample
     # Note: outputFileName should NOT include "results/" prefix as Exomiser adds it automatically
     cat <<EOF > ${meta.id}_analysis.yml
----
 analysis:
     genomeAssembly: ${genome_assembly}
     vcf: ${vcf}
@@ -63,7 +62,7 @@ analysis:
         GNOMAD_E_AFR, GNOMAD_E_AMR, GNOMAD_E_EAS, GNOMAD_E_NFE, GNOMAD_E_SAS,
         GNOMAD_G_AFR, GNOMAD_G_AMR, GNOMAD_G_EAS, GNOMAD_G_NFE, GNOMAD_G_SAS
     ]
-    pathogenicitySources: [ REVEL, MVP ]
+    pathogenicitySources: [ REVEL, MVP, CADD ]
     steps: [
         failedVariantFilter: {},
         variantEffectFilter: {

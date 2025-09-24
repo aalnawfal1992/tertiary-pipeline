@@ -27,6 +27,7 @@ def generate_exomiser_config(sample_data, output_file):
         'analysis': {
             'genomeAssembly': genome_assembly,
             'vcf': sample_data['vcf_path'],
+            'transcriptSource': [REFSEQ],
             'proband': sample_data['sample_id'],
             'hpoIds': hpo_ids,
             'inheritanceModes': {
