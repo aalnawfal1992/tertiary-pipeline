@@ -63,6 +63,7 @@ analysis:
         GNOMAD_G_AFR, GNOMAD_G_AMR, GNOMAD_G_EAS, GNOMAD_G_NFE, GNOMAD_G_SAS
     ]
     pathogenicitySources: [ REVEL, MVP, CADD ]
+    #pathogenicitySources: [ REVEL, MVP, CADD, Polyphen2_HDIV, Polyphen2_HVAR, MutationTaster, DANN, PhyloP, GERP++ ]
     steps: [
         failedVariantFilter: {},
         variantEffectFilter: {
